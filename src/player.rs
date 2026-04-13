@@ -6,10 +6,10 @@ use crate::{
     UpdateSystems,
     animation::{Animation, AnimationState},
     controller::{CharacterControllerBundle, MovementAction, MovementEvent},
-    trigger::TriggerActor,
 };
 use avian2d::{math::*, prelude::*};
-use bevy::{color::palettes::css::BLUE, prelude::*, sprite::Anchor};
+use bevy::{prelude::*, sprite::Anchor};
+use bevy_ecs_ldtk::prelude::*;
 
 const PLAYER_SPRITE_FILE: &str = "sprites/character/spritesheet-characters-double.png";
 
@@ -22,6 +22,7 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         record_player_directional_input.in_set(UpdateSystems::RecordInput),
     );
+    app.register_ldtk_entity::<PlayerSpawnPointBundle>("PlayerSpawnPoint");
     app.add_observer(spawn_player_at_spawn_point);
 }
 
@@ -35,6 +36,11 @@ pub struct Player;
 #[reflect(Component)]
 pub struct PlayerSpawnPoint;
 
+#[derive(Bundle, Default, LdtkEntity)]
+struct PlayerSpawnPointBundle {
+    spawn_point: PlayerSpawnPoint,
+}
+
 fn spawn_player_at_spawn_point(
     add_player_spawn: On<Add, PlayerSpawnPoint>,
     mut commands: Commands,
@@ -43,15 +49,18 @@ fn spawn_player_at_spawn_point(
     asset_server: Res<AssetServer>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
-    println!("Spawning player at spawn point");
     if !player_query.is_empty() {
-        // Player already exists, do nothing.
         return;
     }
 
-    let spawn_transform = *player_spawn_query
+    let mut spawn_transform = *player_spawn_query
         .get(add_player_spawn.event().entity)
         .unwrap();
+
+    // --- SCALE ADJUSTMENT ---
+    let scale_factor = 0.2; // Adjust this value as needed
+    spawn_transform.scale = Vec3::splat(scale_factor);
+    // ------------------------
 
     let layout =
         TextureAtlasLayout::from_grid(UVec2::splat(256), 7, 7, Some(UVec2::splat(1)), None);
@@ -68,7 +77,6 @@ fn spawn_player_at_spawn_point(
     commands.spawn((
         Name::new("Player"),
         Player,
-        TriggerActor,
         spawn_transform,
         Sprite {
             image: asset_server.load(PLAYER_SPRITE_FILE),
@@ -80,21 +88,13 @@ fn spawn_player_at_spawn_point(
         },
         Anchor::from(Vec2::new(0., -0.2)),
         player_animation,
-        CharacterControllerBundle::new(Collider::capsule(50., 50.)).with_movement(
+        // Adjust Collider dimensions to match new scale (e.g. 25. instead of 50.)
+        CharacterControllerBundle::new(Collider::capsule(18., 18.)).with_movement(
             5000.,
             0.9,
             800.,
             PI * 0.45,
         ),
-        children![(
-            Name::new("Player Minimap Marker"),
-            Sprite {
-                custom_size: Some(Vec2::new(32., 96.)),
-                color: Color::Srgba(BLUE),
-                ..default()
-            },
-            Transform::from_xyz(0., 0., 100.0),
-        )],
     ));
 }
 

@@ -1,6 +1,6 @@
 use avian2d::prelude::*;
 use bevy::{asset::AssetMetaCheck, prelude::*};
-use bevy_ecs_tiled::prelude::*;
+use bevy_ecs_ldtk::prelude::*;
 
 mod animation;
 mod camera;
@@ -8,7 +8,7 @@ mod controller;
 mod debug;
 mod level;
 mod player;
-mod trigger;
+mod walls;
 
 fn main() {
     let mut app = App::new();
@@ -43,7 +43,6 @@ fn main() {
             UpdateSystems::TickTimers,
             UpdateSystems::RecordInput,
             UpdateSystems::ApplyMovement,
-            UpdateSystems::TriggerZones,
             UpdateSystems::UpdateSprite,
         )
             .chain(),
@@ -55,21 +54,24 @@ fn main() {
         debug::plugin,
         player::plugin,
         level::plugin,
-        trigger::plugin,
         controller::CharacterControllerPlugin,
+        walls::WallPlugin,
     ));
 
     app.add_plugins((
-        // Add bevy_ecs_tiled plugin: bevy_ecs_tilemap::TilemapPlugin will
-        // be automatically added as well if it's not already done.
-        TiledPlugin::default(),
+        LdtkPlugin,
         // Setup physics
-        TiledPhysicsPlugin::<TiledPhysicsAvianBackend>::default(),
         PhysicsPlugins::default().with_length_unit(100.0),
     ));
 
-    // Set camera default clear color
-    app.insert_resource(ClearColor(Color::srgb_u8(196, 237, 240)));
+    app.insert_resource(LevelSelection::index(0));
+    app.insert_resource(LdtkSettings {
+        level_spawn_behavior: LevelSpawnBehavior::UseWorldTranslation {
+            load_level_neighbors: true,
+        },
+        set_clear_color: SetClearColor::FromLevelBackground,
+        ..default()
+    });
 
     // Run the app !
     app.run();
@@ -80,6 +82,5 @@ enum UpdateSystems {
     TickTimers,
     RecordInput,
     ApplyMovement,
-    TriggerZones,
     UpdateSprite,
 }

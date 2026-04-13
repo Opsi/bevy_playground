@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_ecs_tiled::prelude::*;
 
 use crate::player::Player;
 
@@ -19,7 +18,6 @@ fn setup_camera(mut commands: Commands) {
         Name::new("Camera"),
         Camera2d,
         MainCamera,
-        TiledParallaxCamera,
         IsDefaultUiCamera,
     ));
 }
